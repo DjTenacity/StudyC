@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <Windows.h>
 #include <stdlib.h>
+#include <string.h>
 
 //使用字符数组存储字符串
-void msg(){
+void msg1(){
 	//要添加结束符,否则就会乱码
 	char str[] = { 'a', 'b', 'c', '\0' };
 	char str2[3] = { 'a', 'b', 'c' };
@@ -19,7 +20,7 @@ void msg(){
 }
 
 //字符指针
-void msg2(){
+void msg3(){
 	//内存连续排列
 	char *str = "ha  h ahh";
 
@@ -80,7 +81,7 @@ system("pause");
 
 //strstr 从字符串haystack中寻找needle第一次出现的位置
 
-void main(void){
+void main2(void){
 	char *haystack = "I want go to USA!";
 	char *needle = "to";
 	//U元素的指针
