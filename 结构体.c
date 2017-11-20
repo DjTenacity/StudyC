@@ -223,7 +223,7 @@ void  reName(GirlP g){
 	g->name = "haha";
 }
 
-void main(){
+void mains(){
 	Girl g1 = { "loly", 18, sayHi };
 	GirlP gp1 = &g1;
 	//g1.sayHi("hello");

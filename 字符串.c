@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS //宏定义
 
 #include <stdio.h>
 #include <Windows.h>
@@ -95,4 +96,42 @@ void main2(void){
 	}
 
 	system("pause");
+}
+
+//字符数组的整体赋值只能在字符数组初始化时使用,不能用字符数组的赋值
+//字符数组的赋值只能对其元素一一赋值 a[0] ='x' ;
+struct Song{
+	char name[20];
+	char *singer;
+} S,*SP;
+//S 结构体变量 ,SP结构体变量指针
+
+void mainstr(){
+	//struct Song s1;
+	// s1.name = "222";
+
+	//字符串数组赋值,只能在声明时
+	char  a[10] = "2222";
+	a[5] ='y';
+	//重新赋值
+	strcpy(a,"hahahahah");
+
+	//字符指针,可以多次赋值不同的字符串
+	char *b = "Friend";
+	b = "hahahahha";
+
+	printf("%s\n",b);
+//	b++;
+//	*b = 'b';//运行报错,不能修改字符内容
+
+	strcpy(S.name, "hahahahah");
+	S.singer = "me";
+	//指针本身也是一种变量,SP指针赋值,fu一个地址
+	SP = &S;
+	
+	printf("%s\n",S.name);
+	(*SP).singer = "shale ba";
+
+	printf("%s,%s,%#x", S.name, (*SP).singer, S);
+	getchar();
 }
