@@ -40,8 +40,15 @@ public class JniStudy {
 	public native void localRef();
 	
 	public native void createGlobalRef();
-	public native void getGlobalRef();
-	public native void deletetGlobalRef();
+	public native String getGlobalRef();
+	public native void deleteGlobalRef();
+	//异常处理
+	public native void exeception();
+	//缓存策略
+	public native void cached();
+	
+	public native static void initIds();
+	
 	
 	//D:\JAVA\cccuo\JniStudy
 	//D:\JAVA\cccuo\JniStudy\src
@@ -80,6 +87,33 @@ public class JniStudy {
 			strb.append(s+"**");
 		}
 		System.out.println(strb.toString());
+		
+		t.createGlobalRef();
+		System.out.println(t.getGlobalRef());
+		//用完之后释放
+		t.deleteGlobalRef();
+		System.out.println("释放完了...");
+		//System.out.println(t.getGlobalRef());
+		
+		try {
+			t.exeception();						
+		} catch (Exception e) {
+			System.out.println("发生异常："+e.getMessage());
+		}
+		
+		System.out.println("--------异常发生之后-------");
+		
+		try {
+			t.exeception();
+		} catch (Exception e) {
+			//e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+		
+		//不断调用cached方法
+		for (int i = 0; i < 100; i++) {
+			t.cached();
+		}
 	}
 	//产生指定范围的随机数
 	public int getRandomInt(int max){
@@ -95,6 +129,7 @@ public class JniStudy {
 	static {
 		//System.load(filename);
 		System.loadLibrary("StudyJni");
+		initIds();
 	}
 }
 /**

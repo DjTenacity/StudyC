@@ -1,321 +1,362 @@
 #define _CRT_SECURE_NO_WARNINGS //宏定义,预编译的时候回去替换,检查
-//引入头文件,相当于Java的导包
-//头文件只有函数的声明,没有函数的实现,函数的实现是在编译的时候会去动态库找函数的实现
-//(所以动态库里面不能有重名的函数名,c++的话是可以重名的,因为c++有命名空间),然后链接到printf这里
-#include <stdio.h>
-#include <stdlib.h>
+#include "com_lovedj_JniStudy.h"
 #include <Windows.h>
-#include <math.h>
-#include <time.h>
+#include <string.h>
+#include <stdlib.h>
 
-//Java的main函数参数是固定的,这里参数不是固定的,但是不能拼写错误~~
+//函数实现
+JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_getStringFromC
+(JNIEnv *env, jclass jcls){
+	WinExec("D:\\QQ\\Bin\\QQScLauncher.exe", 0);
+	//JNIEnv  在C中是结构体指针的一个别名 ,,,在C++里面是结构体的别名
+	//env 在C中是是一个二级指针			,,,在C++里面是结构体的一级指针
+	//代表Java运行环境,调用Java中的代码
+
+	//简单的实现
+	//将C的字符串转为一个java字符串
+	return (*env)->NewStringUTF(env, "C  String");
+}
+//*是取直
+//com_lovedj_JniStudy
+
+JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_getString2FromC
+(JNIEnv *env, jobject job){
+	return (*env)->NewStringUTF(env, "C  String22");
+}
+
+//每个native函数,都至少有两个参数(JNIEnv *env, jobject job)
+//1)当native方法为静态方法时, 
+//jclass 代表native方法所属类的class对象(StudyJni.class)
+//2)当native方法为非静态方法时,
+//jobject代表native方法所属的对象
+
+//native方法-->java    native函数-->C/C++里面对应的native方法实现的函数
+
+//数据类型
+
+//基本数据
+//Java基本数据类型与JNI数据类型的映射关系
+//Java类型->JNI类型->C类型
 
 /*
-void main(){
-printf("hello world\n");
-system("pause");
-}
-*/
-//1.基本数据类型
-//int short long float double char
-/*
-int %d
-short %d
-long %ld
-float %f
-double %lf
-char %c
-%x 十六进制
-%o 八进制
-%s 字符串
-*/
-/*
-void main(){
-int i = 1;
-printf("%d\n",i);
-
-float f = 23.3;
-printf("%f\n",f);
-
-//基本数据类型所占的字节数
-printf("int占%d字节\n",sizeof(int));
-printf("char占%d字节\n", sizeof(char));
-printf("float占%d字节\n", sizeof(float));
-
-//循环
-//为了能在window环境和linux环境下都运行 运行
-int n = 0;
-for (; n < 10; n++){
-printf("%d\n",n);
-}
-
-//等待输入
-system("pause");
-}
+boolean jboolean
+byte jbyte;
+char jchar;
+short jshort;
+int jint;
+long jlong;
+float jfloat;
+double jdouble;
+void void
 */
 
-//2.输入输出函数
-/*
-void main(){
-int i;
-printf("请输入一个整数：");
-//赋值
-scanf("%d",&i);  //控制台输入，&取地址符
-//打印
-printf("i的值为：%d\n",i);
+//引用类型(对象)
+//String jstring
+//object jobject
+//数组,基本数据类型的数组
+//byte[] jByteArray
+//对象数组
+//object[](String[]) jobjectArray
 
-system("pause");
-}
-*/
+//C/C++访问Java的成员
+JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_accessField
+(JNIEnv *env, jobject job){
+	jclass class = (*env)->GetObjectClass(env, job);
 
+	// 属性名称 属性签名
+	jfieldID fid = (*env)->GetFieldID(env, class, "key", "Ljava/lang/String;");
 
-//指针
-//指针存储的是变量的内存地址
-//内存地址，系统给数据分配的编号（门牌号）
-/*void main(){
-int i = 90;
-//指针变量，创建一个int类型的指针
-int* p = &i; //p的值就是i这个变量的内存地址,,,%#x是输出模式
-printf("%#x\n",p);
+	//获取key属性的值
+	//Get<Type>Field
+	jstring jstr = (*env)->GetObjectField(env, job, fid);
 
-float f = 89.5f;
-//创建一个float类型的指针,*的位置两种都可以
-float *fp = &f;
-printf("%#x\n", fp);//打印出来的就是变量的内存地址
+	//jstr-->c字符串
+	//isCopy  是否复制(true代表复制,false不复制)
+	char *c_str = (*env)->GetStringUTFChars(env, jstr, JNI_FALSE);
 
-system("pause");
-}*/
+	char text[20] = "Do you";
+	strcat(text, c_str);
 
-/* 传入指针,修改数据,java是做不到的
-	传指针,已修改任何想要修改的变量
-	void change(int* p){
-	*p = 300;
-	}
+	//c字符串->jstring
+	jstring new_jstr = (*env)->NewStringUTF(env, text);
 
-	//变量名，对内存空间上的一段数据的抽象
-	void main(){
-	int i = 90;
-	//i = 89;修改方式一
-	//创建一个int类型的指针
-	int *p = &i;
-	//输出地址
-	printf("p的地址：%#x\n",&p);
-	printf("i的地址：%#x\n",&i);
-
-	printf("i的值为：%d\n", i);
-	//间接赋值 i = 200;
-
-	//对p存的地址指向的变量 进行操作;;指针使用时最好给一个初始值
-	//*p = 200; 修改方式2
-	//change(p);
-	change(&i);  // int *p = &i;
-	printf("i的值为：%d\n",i);
-
-	system("pause");
-	}
-	*/
-
-/*void main(){
-	int time = 600;
-	printf("time:%#x\n", &time);
-	while (time > 0){
-	time--;
-	printf("游戏时间剩余%d秒\n", time);
-	//睡眠
-	Sleep(1000);
-	}
-	system("pause");
-	}
-	*/
-/*指针有类型,地址却没有
-地址只是开始的位置,类型读取到什么位置结束
-*/
-
-
-//1.指针为什么要有类型？
-//指针有类型，地址没有类型
-//地址只是开始的位置，类型读取到什么位置结束
-/*
-void main(){
-int i = 89;
-//int 类型的指针
-int *p = &i;
-double j = 78.9;
-//赋值为double类型变量的地址
-p = &j;
-printf("double size:%d\n", sizeof(double));
-printf("%#x,%lf\n",p,*p); //想通过4字节读取8字节变量的值，是不行的
-
-getchar();
-}
-*/
-
-//2.NULL空指针
-/*
-void main(){
-int i = 9;
-int *p = NULL;
-//p = &i;
-
-//空指针的默认值为0
-printf("%#x\n",p);
-//访问内存地址0x000000操作系统不允许
-//p = 100; //操作系统不允许访问
-printf("%d\n",*p);
-getchar();
-}
-*/
-
-//3.多级指针（二级指针）
-//指针保存的是变量的地址，保存的这个变量还可以是一个指针变量
-//动态内存分配给二维数组
-/*
-void main(){
-int a = 50;
-//p1上保存的a的地址
-int* p1 = &a;
-
-//p2上保存的p1的地址
-int** p2 = &p1;
-
-//int*** p3 = &p2;
-
-printf("p1:%#x,p2:%#x\n",p1,p2);
-**p2 = 90;
-
-printf("%d\n",a);
-
-getchar();
-}
-*/
-
-//4.指针的运算
-//指针的运算，一般在数组遍历时才有意义，基于数组在内存中线性排列的方式
-/*
-void main(){
-//数组在内存中连续存储
-int ids[] = { 78, 90, 23, 65, 19 };
-//数组变量名：ids就是数组的首地址
-printf("%#x\n",ids);
-printf("%#x\n",&ids);
-printf("%#x\n",&ids[0]);
-//指针变量
-int *p = ids;
-printf("%d\n",*p);
-//指针的加法
-p++; //p++向前移动sizeof(数据类型)个字节
-printf("p的值:%#x\n", p);
-//p--;
-printf("%d\n", *p);
-getchar();
-}
-*/
-//5.通过指针给数组赋值
-/*
-void main(){
-int uids[5];
-//高级写法
-//int i = 0;
-//for (; i < 5; i++){
-//	uids[i] = i;
-//}
-//早些版本的写法
-int* p = uids;
-printf("%#x\n",p);
-int i = 0; //i是数组元素的值
-for (; p < uids + 5; p++){
-*p = i;
-i++;
+	//修改key  set<Type>Field
+	(*env)->SetObjectField(env, job, fid, new_jstr);
+	return new_jstr;
 }
 
-getchar();
-}
-*/
+//访问静态属性
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_accessStaticField
+(JNIEnv *env, jobject jcls){
+	//jclass
+	jclass cls = (*env)->GetObjectClass(env, jcls);
+	//jfidId
+	jfieldID fid = (*env)->GetStaticFieldID(env, cls, "count", "I");
 
-//6.函数指针
-/*
-int msg(char* msg,char* title){
-MessageBox(0,msg,title,0);
-return 0;
-}
-void main(){
-//msg();
-printf("%#x\n",msg);
-printf("%#x\n",&msg);
-//函数指针
-//函数返回值类型，函数指针的名称，函数的参数列表
-int(*fun_p)(char* msg, char* title) = msg;
-fun_p("消息内容","标题");
-
-getchar();
-}
-*/
-
-int add(int a, int b){
-	return a + b;
+	//GetStatic<Type>Field
+	jint count = (*env)->GetStaticIntField(env, cls, fid);
+	count++;
+	//修改
+	(*env)->SetStaticIntField(env, cls, fid, count);
 }
 
-int minus(int a, int b){
-	return a - b;
-}
+//访问Java方法
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_accessMethod
+(JNIEnv *env, jobject jcls){
+	//jclass
+	jclass cls = (*env)->GetObjectClass(env, jcls);
+	//jmethodID
+	jmethodID mid = (*env)->GetMethodID(env, cls, "getRandomInt", "(I)I");
 
-/*int div(int a, int b){
-return a - b;
-}*/
+	//调用
+	jint random = (*env)->CallIntMethod(env, jcls, mid, 200);
 
-//msg函数需要传递一个函数指针参数
-//类似于我们Java中的回调函数
-//java 里面传的都是对象,譬如监听
-void msg(int(*func_p)(int a, int b), int m, int n){
-	printf("执行一段代码...\n");
-	printf("执行回调函数...\n");
-	int r = func_p(m, n);
-	printf("执行结果：%d\n", r);
+	printf("random num :%ld", random);
 }
-/*
-void main(){
-//加法
-//int(*func_p)(int a, int b) = add;
-msg(div, 10, 20);
-msg(add, 10, 20);
-//减法
-msg(minus,50,10);
-getchar();
+//静态方法
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_accessStaticMethod
+(JNIEnv *env, jobject jobj){
+	//jclass
+	jclass cls = (*env)->GetObjectClass(env, jobj);
+	//jmethodID
+	jmethodID mid = (*env)->GetStaticMethodID(env, cls, "getUUID", "()Ljava/lang/String;");
+
+	//调用
+	//CallStatic<Type>Method
+	jstring uuid = (*env)->CallIntMethod(env, jobj, mid);
+
+	//随机文件名称
+	//jstring -> char*
+	//isCopy JNI_FALSE ,代表Java和c操作的是同一个字符串
+	char *uuid_str = (*env)->GetStringUTFChars(env, uuid, JNI_FALSE);
+
+	//拼接
+	char filename[100];
+	sprintf(filename, "D://%s.txt", uuid_str);
+	FILE *fp = fopen(filename, "w");
+	fputs("i love money", fp);
+	fclose(fp);
+
 }
 
 
-*/
-//案例：用随机数生成一个数组，写一个函数查找最小的值，并返回最小数的地址，在主函数中打印出来
-int* getMinPointer(int ids[], int len){
+
+//构造方法
+JNIEXPORT jobject JNICALL Java_com_lovedj_JniStudy_accessConstructor
+(JNIEnv *env, jobject jobj){
+	//jclass
+	jclass cls = (*env)->FindClass(env, "java/util/Date");
+	//jmethodID
+	jmethodID constructor_mid = (*env)->GetMethodID(env, cls, "<init>", "()V");
+
+	//实例化一个Date对象
+	jobject date_obj = (*env)->NewObject(env, cls, constructor_mid);
+	//调用getTime方法
+	jmethodID mid = (*env)->GetMethodID(env, cls, "getTime", "()J");
+
+	jlong time = (*env)->CallLongMethod(env, date_obj, mid);
+
+	printf("\ntime%lld", time);
+	return date_obj;
+}
+
+
+//调用父类的方法
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_accessNovirtualMethod
+(JNIEnv *env, jobject jobj){
+	//获取man属性(对象)
+	jclass cls = (*env)->GetObjectClass(env, jobj);//这
+
+
+	jfieldID fid = (*env)->GetFieldID(env, cls, "human", "Lcom/lovedj/Human;");
+
+	jobject human_obj = (*env)->GetObjectField(env, jobj, fid);
+
+	//执行sayhi方法
+	jclass homen_cls = (*env)->FindClass(env, "com/lovedj/Human");//  注意传入父类的名称
+	jmethodID mid = (*env)->GetMethodID(env, homen_cls, "sayHi", "()V");
+	//调用父类的方法
+	(*env)->CallNonvirtualObjectMethod(env, human_obj, homen_cls, mid);
+}
+
+//传入中文,传出中文  问题
+JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_chineseChars
+(JNIEnv *env, jobject jobj, jstring in){
+	//获取man属性(对象)
+	jclass cls = (*env)->GetObjectClass(env, jobj);//这
+
+	jfieldID fid = (*env)->GetFieldID(env, cls, "human", "Lcom/lovedj/Human;");
+
+	//char *uuid_str = (*env)->GetStringUTFChars(env, in, JNI_FALSE);
+
+	//c->string
+	//	char *c_str = "我爱你,从看到你第一眼开始";
+	char c_str[] = "我爱你,从看到你第一眼开始";
+	//jstring jstr = (*env)->NewStringUTF(env,c_str);
+
+	//执行String(byte bytes[], String charsetName)构造方法需要的条件
+	//1.jmethodID
+	//2.byte数组
+	//3.字符编码jstring
+	jclass str_cls = (*env)->FindClass(env, "java/lang/String");
+
+	jmethodID constructor_mid = (*env)->GetMethodID(env, str_cls, "<init>", "([BLjava/lang/String;)V");
+
+	//jbyte -> char 
+	//jbyteArray --> char []
+	jbyteArray bytes = (*env)->NewByteArray(env, strlen(c_str));
+	//byte数组赋值
+	// 0, strlen(c_str) 从头到尾
+	//对等于,从c_str这个字符数组,复制到bytes这个字符数组
+	(*env)->SetByteArrayRegion(env, bytes, 0, strlen(c_str), c_str);
+
+	//字符编码jstring
+	jstring charsetName = (*env)->NewStringUTF(env, "GB2312");
+
+	//调用构造函数,返回编码之后的
+	return (*env)->NewObject(env, str_cls, constructor_mid, bytes, charsetName);
+	//ctrl+shift+b
+}
+
+int compare(int *a, int *b){
+	return (*a) - (*b);
+}
+
+//数组排序,
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_giveArray(JNIEnv *env, jobject jobj, jintArray array){
+	//jintArray->jint指针 ->c int 数组
+	//选用TRUE就是Java和native操作的数据互不相干,false(或者NULL) 的话就是操作同一个数据
+	jint *elems = (*env)->GetIntArrayElements(env, array, NULL);
+
+	//数组的长度
+	int len = (*env)->GetArrayLength(env, array);
+
+	//printf("%#x,%#x\n", &elems, &array);
+
+	//java中调用方法要通过对象,在这里C 要传入方法指针
+	qsort(elems, len, sizeof(jint), compare);
+
+	//同步,必须有这一步来对Java中的数组产生影响
+
+	//0,java数组进行更新,并且释放C/C++数组
+	// JNI_ABORT  Java数组不进行更新,但是释放C/C++数组
+	//JNI_COMMIT Java数组进行更新,不释放C/C++数组,函数执行完了,数组还是会释放
+	(*env)->ReleaseIntArrayElements(env, array, elems, JNI_COMMIT);
+
+}
+
+
+//返回数组
+JNIEXPORT jintArray JNICALL Java_com_lovedj_JniStudy_getArray(JNIEnv *env, jobject jobj, jint len){
+	//这是两个互不相干的数组
+	jintArray jint_arr = (*env)->NewIntArray(env, len);
+
+	jint *elems = (*env)->GetIntArrayElements(env, jint_arr, NULL);
 	int i = 0;
-	int* p = &ids[0];
 	for (; i < len; i++){
-		if (ids[i] < *p){
-			p = &ids[i];
-		}
+		elems[i] = i;
 	}
-	return p;
+	//同步
+	(*env)->ReleaseIntArrayElements(env, jint_arr, elems, JNI_COMMIT);
+	//在jni中,通过
+	return jint_arr;
 }
-/*
-void main(){
-	int ids[10];
+
+//JNI 引用变量
+//引用类型：局部引用和全局引用
+//作用：在JNI中告知虚拟机何时回收一个JNI变量
+
+//局部引用--------->没有创建代码,只有回收,通过DeleteLocalRef手动释放对象
+//1  访问一个很大的java对象,使用完之后,还要进行复杂的耗时操作
+//2  创建了大量的局部引用,占用了太多的内存,而且这些局部引用跟后面的操作没有关联性
+//循环创建数组
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_localRef(JNIEnv *env, jobject jobj){
 	int i = 0;
-	//初始化随机数发生器，设置种子，种子不一样，随机数才不一样
-	//当前时间作为种子 有符号 int -xx - > +xx
-	//无符号数->正数
-	srand((unsigned)time(NULL));
-	for (; i < 10; i++){
-		//100范围内
-		ids[i] = rand() % 100;
-		printf("%d\n", ids[i]);
+	for (; i < 5; i++){
+		//创建Date对象
+		jclass cls = (*env)->FindClass(env, "java/util/Date");
+		jmethodID constructor_mid = (*env)->GetMethodID(env,cls,"<init>","()V");
+		jobject obj = (*env)->NewObject(env,cls,constructor_mid);
+
+		//...............省略操作.............
+
+		//不再使用jobject对象了
+		//通知垃圾回收器回收这些对象
+		(*env)->DeleteLocalRef(env,obj);
+		//.........省略操作.............
+	}
+}
+//全局引用-->共享(可以跨多个线程),手动控制内存使用
+jstring globar_str;
+
+//创建
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_createGlobalRef(JNIEnv *env, jobject jobj){
+	jstring obj=(*env)->NewStringUTF(env,"jni development is powerful!!!");
+	(*env)->NewGlobalRef(env,obj);
+}
+
+//获得
+JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_getGlobalRef(JNIEnv *env, jobject jobj){
+	return globar_str;
+}
+
+//释放
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_deleteGlobalRef(JNIEnv *env, jobject jobj){
+	(*env)->DeleteGlobalRef(env,globar_str);
+}
+//弱全局引用
+//节省内存，在内存不足时可以是释放所引用的对象
+//可以引用一个不常用的对象，如果为NULL，临时创建
+//创建：NewWeakGlobalRef,销毁：DeleteGlobalWeakRef
+
+//异常处理---->C里面没有try{}catch(){}
+//1.保证Java代码可以运行
+//2.补救措施保证C代码继续运行
+
+//JNI自己抛出的异常，在Java层无法被捕捉，只能在C层清空
+//用户通过ThrowNew抛出的异常，可以在Java层捕捉
+JNIEXPORT void JNICALL Java_com_dongnaoedu_jni_JniTest_exeception(JNIEnv *env, jobject jobj){
+	jclass cls = (*env)->GetObjectClass(env, jobj);
+	jfieldID fid = (*env)->GetFieldID(env, cls, "key2", "Ljava/lang/String;");
+	//检测是否发生Java异常
+	jthrowable exception = (*env)->ExceptionOccurred(env);
+	if (exception != NULL){
+		//让Java代码可以继续运行
+		//清空异常信息
+		(*env)->ExceptionClear(env);
+
+		//补救措施
+		fid = (*env)->GetFieldID(env, cls, "key", "Ljava/lang/String;");
 	}
 
-	int* p = getMinPointer(ids, sizeof(ids) / sizeof(int));
-	printf("%#x,%d\n", p, *p);
-	//这里应该就一个变量 p,*相当于指向的意思,p存放的是地址,*p应该是指向值的起始地址
-	//*p是指针,p是一个存放地址的变量,存放的是值的地址
-	//*p指定义一个指针变量p ( * 声明的是一个指针，而 p 是存放某个变量的地址)
+	//获取属性的值
+	jstring jstr = (*env)->GetObjectField(env, jobj, fid);
+	char *str = (*env)->GetStringUTFChars(env, jstr, NULL);
 
-	getchar();
+	//对比属性值是否合法
+	if (_stricmp(str, "loveDj") != 0){
+		//认为抛出异常，给Java层处理
+		jclass newExcCls = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+		(*env)->ThrowNew(env, newExcCls, "key's value is invalid!");
+	}
 }
-*/
+
+//缓存策略
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_catch(JNIEnv *env, jobject jobj){
+	jclass cls = (*env)->GetObjectClass(env,jobj);
+	//获取 key_id 只获取一次
+	//局部的静态变量,作用域就在这个函数里面,会随着作用域结束而结束,但是它的值会仍然保存在内存当中,存到整个应用程序结束
+	static jfieldID key_id = NULL;
+	if (key_id==NULL){
+		key_id = (*env)->GetFieldID(env, cls, "key", "Ljava/lang/String;");
+		print("-----------key_id----------");
+
+	}
+}
+//初始化全局变量,动态库加载完成之后,立即缓存起来
+jfieldID key_fid;
+jmethodID random_mid;
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_initIds(JNIEnv *env, jclass cls){
+	key_fid = (*env)->GetFieldID(env, cls, "key", "Ljava/lang/String;");
+	random_mid = (*env)->GetMethodID(env, cls, "getRandomInt", "(I)I;");
+}
