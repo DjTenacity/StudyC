@@ -71,8 +71,14 @@ JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_accessField
 	jstring jstr = (*env)->GetObjectField(env, job, fid);
 
 	//jstr-->c字符串
-	//isCopy  是否复制(true代表复制,false不复制)
-	char *c_str = (*env)->GetStringUTFChars(env, jstr, JNI_FALSE);
+	//isCopy  是否复制,不是由我们决定的,而是由jni函数自己内部决定的
+	jboolean isCopy = NULL;
+	//函数内部复制了,isCopy为JNI_TURE,没有复制则为FALSE
+	char *c_str = (*env)->GetStringUTFChars(env, jstr, &isCopy);
+	if (isCopy){
+		printf("复制了哟");
+		//意义:isCopy为JNI_FALSE,c_str和jstrt都是指向同一个字符串,,不能修改java字符串(final)
+	}
 
 	char text[20] = "Do you";
 	strcat(text, c_str);
@@ -82,6 +88,9 @@ JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_accessField
 
 	//修改key  set<Type>Field
 	(*env)->SetObjectField(env, job, fid, new_jstr);
+
+	//只要使用了GetStringUTFChars   就一定要释放
+	(*env)->ReleaseStringUTFChars(env,jstr,c_str);
 	return new_jstr;
 }
 
@@ -223,8 +232,7 @@ int compare(int *a, int *b){
 }
 
 //数组排序,
-JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_giveArray
-(JNIEnv *env, jobject jobj, jintArray array){
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_giveArray(JNIEnv *env, jobject jobj, jintArray array){
 	//jintArray->jint指针 ->c int 数组
 	//选用TRUE就是Java和native操作的数据互不相干,false(或者NULL) 的话就是操作同一个数据
 	jint *elems = (*env)->GetIntArrayElements(env, array, NULL);
@@ -248,8 +256,7 @@ JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_giveArray
 
 
 //返回数组
-JNIEXPORT jintArray JNICALL Java_com_lovedj_JniStudy_getArray
-(JNIEnv *env, jobject jobj, jint len){
+JNIEXPORT jintArray JNICALL Java_com_lovedj_JniStudy_getArray(JNIEnv *env, jobject jobj, jint len){
 	//这是两个互不相干的数组
 	jintArray jint_arr = (*env)->NewIntArray(env, len);
 
@@ -272,8 +279,7 @@ JNIEXPORT jintArray JNICALL Java_com_lovedj_JniStudy_getArray
 //1  访问一个很大的java对象,使用完之后,还要进行复杂的耗时操作
 //2  创建了大量的局部引用,占用了太多的内存,而且这些局部引用跟后面的操作没有关联性
 //循环创建数组
-JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_localRef
-(JNIEnv *env, jobject jobj){
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_localRef(JNIEnv *env, jobject jobj){
 	int i = 0;
 	for (; i < 5; i++){
 		//创建Date对象
@@ -293,20 +299,73 @@ JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_localRef
 jstring globar_str;
 
 //创建
-JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_createGlobalRef
-(JNIEnv *env, jobject jobj){
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_createGlobalRef(JNIEnv *env, jobject jobj){
 	jstring obj=(*env)->NewStringUTF(env,"jni development is powerful!!!");
 	(*env)->NewGlobalRef(env,obj);
 }
 
 //获得
-JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_getGlobalRef
-(JNIEnv *env, jobject jobj){
+JNIEXPORT jstring JNICALL Java_com_lovedj_JniStudy_getGlobalRef(JNIEnv *env, jobject jobj){
 	return globar_str;
 }
 
 //释放
-JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_deleteGlobalRef
-(JNIEnv *env, jobject jobj){
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_deleteGlobalRef(JNIEnv *env, jobject jobj){
 	(*env)->DeleteGlobalRef(env,globar_str);
+}
+//弱全局引用
+//节省内存，在内存不足时可以是释放所引用的对象
+//可以引用一个不常用的对象，如果为NULL，临时创建
+//创建：NewWeakGlobalRef,销毁：DeleteGlobalWeakRef
+
+//异常处理---->C里面没有try{}catch(){}
+//1.保证Java代码可以运行
+//2.补救措施保证C代码继续运行
+
+//JNI自己抛出的异常，在Java层无法被捕捉，只能在C层清空
+//用户通过ThrowNew抛出的异常，可以在Java层捕捉
+JNIEXPORT void JNICALL Java_com_dongnaoedu_jni_JniTest_exeception(JNIEnv *env, jobject jobj){
+	jclass cls = (*env)->GetObjectClass(env, jobj);
+	jfieldID fid = (*env)->GetFieldID(env, cls, "key2", "Ljava/lang/String;");
+	//检测是否发生Java异常
+	jthrowable exception = (*env)->ExceptionOccurred(env);
+	if (exception != NULL){
+		//让Java代码可以继续运行
+		//清空异常信息
+		(*env)->ExceptionClear(env);
+
+		//补救措施
+		fid = (*env)->GetFieldID(env, cls, "key", "Ljava/lang/String;");
+	}
+
+	//获取属性的值
+	jstring jstr = (*env)->GetObjectField(env, jobj, fid);
+	char *str = (*env)->GetStringUTFChars(env, jstr, NULL);
+
+	//对比属性值是否合法
+	if (_stricmp(str, "loveDj") != 0){
+		//认为抛出异常，给Java层处理
+		jclass newExcCls = (*env)->FindClass(env, "java/lang/IllegalArgumentException");
+		(*env)->ThrowNew(env, newExcCls, "key's value is invalid!");
+	}
+}
+
+//缓存策略
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_catch(JNIEnv *env, jobject jobj){
+	jclass cls = (*env)->GetObjectClass(env,jobj);
+	//获取 key_id 只获取一次
+	//局部的静态变量,作用域就在这个函数里面,会随着作用域结束而结束,但是它的值会仍然保存在内存当中,存到整个应用程序结束
+	static jfieldID key_id = NULL;
+	if (key_id==NULL){
+		key_id = (*env)->GetFieldID(env, cls, "key", "Ljava/lang/String;");
+		print("-----------key_id----------");
+
+	}
+}
+//初始化全局变量,动态库加载完成之后,立即缓存起来
+jfieldID key_fid;
+jmethodID random_mid;
+JNIEXPORT void JNICALL Java_com_lovedj_JniStudy_initIds(JNIEnv *env, jclass cls){
+	key_fid = (*env)->GetFieldID(env, cls, "key", "Ljava/lang/String;");
+	random_mid = (*env)->GetMethodID(env, cls, "getRandomInt", "(I)I;");
 }
